@@ -297,7 +297,7 @@ export default function DashboardPage() {
                 <div>
                   <h2 style={{ fontSize: 16, fontWeight: 600 }}>Low Stock Medicines</h2>
                   <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 1 }}>
-                    {lowStockMeds.length} item{lowStockMeds.length !== 1 ? "s" : ""} below {LOW_STOCK_THRESHOLD} units
+                    {lowStockMeds.length} item{lowStockMeds.length !== 1 ? "s" : ""} below their set stock limits
                   </div>
                 </div>
               </div>
