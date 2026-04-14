@@ -38,7 +38,7 @@ function getExpiryBadge(dateStr: string) {
 
 function getStockBadge(qty: number, threshold: number = 10) {
   if (qty === 0) return <span className="badge badge-red">Out of Stock</span>;
-  if (qty <= threshold) return <span className="badge badge-yellow"><AlertTriangle size={10} />Low</span>;
+  if (qty <= threshold) return <span className="badge badge-yellow"><AlertTriangle size={10} />{qty} left</span>;
   return <span className="badge badge-green">{qty}</span>;
 }
 

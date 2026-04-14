@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const todayRevenue = sales.reduce((sum, s) => sum + s.totalAmount, 0);
   const todaySalesCount = sales.length;
 
-  const lowStockMeds = medicines.filter((m) => m.quantity <= (m.reorderLevel ?? 10));
+  const lowStockMeds = medicines.filter((m) => m.quantity > 0 && m.quantity <= (m.reorderLevel ?? 10));
   const expiringSoonMeds = medicines.filter(
     (m) => daysUntilExpiry(m.expiryDate) <= EXPIRY_WARN_DAYS
   ); // includes expired
