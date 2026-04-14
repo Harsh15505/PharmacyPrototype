@@ -1012,9 +1012,16 @@ tbody tr:hover { background: #f8fffe; }
   }
 
   .billing-layout {
-    grid-template-columns: 1fr;
-    height: auto; 
-    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 150px); 
+    overflow: hidden;
+    gap: 16px;
+  }
+  
+  .billing-layout > div {
+    flex: 1;
+    min-height: 0;
   }
 
   /* Limit table width so it scrolls beautifully on mobile instead of crushing columns */
