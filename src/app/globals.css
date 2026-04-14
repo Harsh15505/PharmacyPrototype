@@ -832,6 +832,49 @@ tbody tr:hover { background: #f8fffe; }
   color: var(--primary);
 }
 
+/* ─── Inventory Responsive List (Div-based Table) ─── */
+.inventory-list {
+  background: var(--bg-card);
+  border: 1px solid var(--border-muted);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.inventory-header {
+  display: flex;
+  background: #f8fafc;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.inventory-row {
+  display: flex;
+  padding: 13px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  align-items: center;
+  transition: background 0.15s;
+}
+
+.inventory-row:hover { background: #f8fffe; }
+.inventory-row:last-child { border-bottom: none; }
+
+.col-name { flex: 2; padding-right: 8px; }
+.col-batch { flex: 1.5; padding-right: 8px; }
+.col-price { flex: 1; padding-right: 8px; }
+.col-stock { flex: 1; padding-right: 8px; }
+.col-expiry { flex: 1.5; padding-right: 8px; }
+.col-actions { flex: 1.5; display: flex; justify-content: flex-end; }
+
+.inventory-row [data-label]::before {
+  display: none;
+}
+
 /* ─── Mobile Responsiveness ─── */
 @media (max-width: 768px) {
   .sidebar {
@@ -896,6 +939,70 @@ tbody tr:hover { background: #f8fffe; }
     width: 100%;
   }
 
+  /* Transform Inventory List to Cards */
+  .inventory-header {
+    display: none;
+  }
+  
+  .inventory-list {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .inventory-row {
+    flex-direction: column;
+    align-items: flex-start;
+    background: var(--bg-card);
+    border: 1px solid var(--border-muted);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .inventory-row > div {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 6px 0;
+    align-items: center;
+  }
+
+  .inventory-row [data-label]::before {
+    display: block;
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+
+  .col-name {
+    font-size: 16px;
+    border-bottom: 1px dashed var(--border-muted) !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 6px;
+  }
+
+  .col-name[data-label]::before {
+    display: none; /* Looks better without 'NAME' prefix */
+  }
+
+  .col-actions {
+    border-top: 1px dashed var(--border-muted) !important;
+    padding-top: 12px !important;
+    margin-top: 6px;
+    justify-content: flex-end !important;
+  }
+  
+  .col-actions .btn-text {
+    display: none; /* Hide text, just show icons on mobile to save space */
+  }
+
   .page-body {
     padding: 16px;
   }
@@ -910,7 +1017,7 @@ tbody tr:hover { background: #f8fffe; }
     overflow: visible;
   }
 
-  /* Force horizontal scrolling for tables */
+  /* Limit table width so it scrolls beautifully on mobile instead of crushing columns */
   .table-wrap {
     width: 100%;
     overflow-x: auto;
@@ -919,6 +1026,11 @@ tbody tr:hover { background: #f8fffe; }
 
   th, td {
     white-space: nowrap;
+  }
+
+  /* Make forms stack vertically on small screens */
+  .form-grid-2 {
+    grid-template-columns: 1fr;
   }
 }
 

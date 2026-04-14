@@ -17,7 +17,6 @@ import { subscribeTodaySales } from "@/services/sales";
 import { Medicine, Sale } from "@/types";
 import Link from "next/link";
 
-const LOW_STOCK_THRESHOLD = 10;
 const EXPIRY_WARN_DAYS = 30;
 
 function daysUntilExpiry(dateStr: string): number {
@@ -48,7 +47,7 @@ export default function DashboardPage() {
   const todayRevenue = sales.reduce((sum, s) => sum + s.totalAmount, 0);
   const todaySalesCount = sales.length;
 
-  const lowStockMeds = medicines.filter((m) => m.quantity <= LOW_STOCK_THRESHOLD);
+  const lowStockMeds = medicines.filter((m) => m.quantity <= (m.reorderLevel ?? 10));
   const expiringSoonMeds = medicines.filter(
     (m) => daysUntilExpiry(m.expiryDate) <= EXPIRY_WARN_DAYS
   ); // includes expired
@@ -186,7 +185,7 @@ export default function DashboardPage() {
               {lowStockMeds.length}
             </div>
             <div className="stat-card-sub">
-              {lowStockMeds.length > 0 ? "Tap to see items" : `All above ${LOW_STOCK_THRESHOLD} units`}
+              {lowStockMeds.length > 0 ? "Tap to see items" : "All stocks are safe"}
             </div>
           </button>
 

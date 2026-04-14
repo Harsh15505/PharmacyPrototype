@@ -21,7 +21,6 @@ import {
 } from "@/services/medicines";
 import { Medicine } from "@/types";
 
-const LOW_STOCK_THRESHOLD = 10;
 const EXPIRY_WARN_DAYS = 30;
 
 function daysUntilExpiry(dateStr: string): number {
@@ -37,9 +36,9 @@ function getExpiryBadge(dateStr: string) {
   return <span className="badge badge-green">OK</span>;
 }
 
-function getStockBadge(qty: number) {
+function getStockBadge(qty: number, threshold: number = 10) {
   if (qty === 0) return <span className="badge badge-red">Out of Stock</span>;
-  if (qty <= LOW_STOCK_THRESHOLD) return <span className="badge badge-yellow"><AlertTriangle size={10} />Low</span>;
+  if (qty <= threshold) return <span className="badge badge-yellow"><AlertTriangle size={10} />Low</span>;
   return <span className="badge badge-green">{qty}</span>;
 }
 
@@ -49,6 +48,7 @@ const emptyForm = {
   quantity: "",
   expiryDate: "",
   batchNumber: "",
+  reorderLevel: "10",
 };
 
 type FormData = typeof emptyForm;
@@ -56,6 +56,7 @@ type FormData = typeof emptyForm;
 export default function InventoryPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [search, setSearch] = useState("");
+  const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -78,10 +79,15 @@ export default function InventoryPage() {
     }
   }, [showModal]);
 
-  const filtered = medicines.filter((m) =>
-    m.name.toLowerCase().includes(search.toLowerCase()) ||
-    m.batchNumber.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = medicines.filter((m) => {
+    const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) ||
+                          m.batchNumber.toLowerCase().includes(search.toLowerCase());
+    
+    // Auto-hide zero stock unless toggle is active
+    if (!showOutOfStock && m.quantity <= 0) return false;
+    
+    return matchesSearch;
+  });
 
   function openAdd() {
     setEditingId(null);
@@ -97,6 +103,7 @@ export default function InventoryPage() {
       quantity: String(med.quantity),
       expiryDate: med.expiryDate,
       batchNumber: med.batchNumber,
+      reorderLevel: String(med.reorderLevel ?? 10),
     });
     setShowModal(true);
   }
@@ -120,6 +127,7 @@ export default function InventoryPage() {
         quantity: parseInt(form.quantity, 10),
         expiryDate: form.expiryDate,
         batchNumber: form.batchNumber.trim(),
+        reorderLevel: parseInt(form.reorderLevel, 10) || 10,
       };
       if (editingId) {
         await updateMedicine(editingId, payload);
@@ -161,6 +169,15 @@ export default function InventoryPage() {
               aria-label="Search medicines"
             />
           </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--text-secondary)" }}>
+            <input 
+              type="checkbox" 
+              checked={showOutOfStock} 
+              onChange={(e) => setShowOutOfStock(e.target.checked)} 
+              style={{ width: 14, height: 14, accentColor: "var(--primary)" }}
+            />
+            Show out of stock
+          </label>
           <button className="btn btn-primary" onClick={openAdd} id="add-medicine-btn">
             <Plus size={16} />
             Add Medicine
@@ -186,65 +203,70 @@ export default function InventoryPage() {
             </div>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Batch No.</th>
-                  <th>Price (₹)</th>
-                  <th>Stock</th>
-                  <th>Expiry</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((med) => (
-                  <tr key={med.id}>
-                    <td>
-                      <div style={{ fontWeight: 500 }}>{med.name}</div>
-                    </td>
-                    <td style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text-muted)" }}>
+          <div className="inventory-list">
+            {/* Desktop Table Header */}
+            <div className="inventory-header">
+              <div className="col-name">Name</div>
+              <div className="col-batch">Batch No.</div>
+              <div className="col-price">Price (₹)</div>
+              <div className="col-stock">Stock</div>
+              <div className="col-expiry">Expiry</div>
+              <div className="col-actions">Actions</div>
+            </div>
+
+            {/* List Body */}
+            <div className="inventory-body">
+              {filtered.map((med) => (
+                <div key={med.id} className="inventory-row">
+                  <div className="col-name" data-label="Name">
+                    <div style={{ fontWeight: 600 }}>{med.name}</div>
+                  </div>
+                  <div className="col-batch" data-label="Batch">
+                    <span style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text-muted)" }}>
                       {med.batchNumber}
-                    </td>
-                    <td style={{ fontWeight: 600, fontFamily: "Figtree, sans-serif" }}>
+                    </span>
+                  </div>
+                  <div className="col-price" data-label="Price">
+                    <span style={{ fontWeight: 600, fontFamily: "Figtree, sans-serif" }}>
                       ₹{med.price.toFixed(2)}
-                    </td>
-                    <td>{getStockBadge(med.quantity)}</td>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {getExpiryBadge(med.expiryDate)}
-                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                          {new Date(med.expiryDate).toLocaleDateString("en-IN", {
-                            day: "2-digit", month: "short", year: "numeric"
-                          })}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => openEdit(med)}
-                          aria-label={`Edit ${med.name}`}
-                        >
-                          <Pencil size={14} />
-                          Edit
-                        </button>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => setDeleteConfirm(med.id)}
-                          aria-label={`Delete ${med.name}`}
-                        >
-                          <Trash2 size={14} />
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </span>
+                  </div>
+                  <div className="col-stock" data-label="Stock">
+                    {getStockBadge(med.quantity, med.reorderLevel ?? 10)}
+                  </div>
+                  <div className="col-expiry" data-label="Expiry">
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {getExpiryBadge(med.expiryDate)}
+                      <span className="expiry-date-text" style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                        {new Date(med.expiryDate).toLocaleDateString("en-IN", {
+                          day: "2-digit", month: "short", year: "numeric"
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="col-actions">
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => openEdit(med)}
+                        aria-label={`Edit ${med.name}`}
+                      >
+                        <Pencil size={14} />
+                        <span className="btn-text">Edit</span>
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => setDeleteConfirm(med.id)}
+                        aria-label={`Delete ${med.name}`}
+                      >
+                        <Trash2 size={14} />
+                        <span className="btn-text">Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -333,6 +355,22 @@ export default function InventoryPage() {
                     value={form.expiryDate}
                     onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
                   />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" htmlFor="med-reorder">Low Stock Alert Level</label>
+                <input
+                  id="med-reorder"
+                  className="form-input"
+                  type="number"
+                  min="1"
+                  placeholder="10"
+                  value={form.reorderLevel}
+                  onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })}
+                />
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                  You will get a low stock warning when quantity drops to this number.
                 </div>
               </div>
             </div>

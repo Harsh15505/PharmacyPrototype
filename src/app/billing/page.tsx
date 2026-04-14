@@ -27,6 +27,7 @@ function daysUntilExpiry(dateStr: string): number {
 export default function BillingPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [search, setSearch] = useState("");
+  const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -39,18 +40,19 @@ export default function BillingPage() {
     });
   }, []);
 
-  // All available medicines (no search) OR filtered list (with search)
-  const availableMedicines = medicines.filter(
-    (m) => m.quantity > 0 && daysUntilExpiry(m.expiryDate) > 0
-  );
-
-  const displayedMedicines = search.trim()
-    ? availableMedicines.filter((m) =>
-        m.name.toLowerCase().includes(search.toLowerCase())
-      )
-    : availableMedicines;
+  const displayedMedicines = medicines
+    .filter((m) => {
+      const match = m.name.toLowerCase().includes(search.toLowerCase());
+      if (!showOutOfStock && m.quantity <= 0) return false;
+      return match;
+    })
+    .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
 
   function addToCart(med: Medicine) {
+    if (med.quantity <= 0) {
+      toast("Out of stock", "error");
+      return;
+    }
     setCart((prev) => {
       const existing = prev.find((i) => i.medicineId === med.id);
       if (existing) {
@@ -275,6 +277,15 @@ export default function BillingPage() {
       <div className="topbar">
         <h1 className="topbar-title">Billing</h1>
         <div className="topbar-actions">
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--text-secondary)", marginRight: 12 }}>
+            <input 
+              type="checkbox" 
+              checked={showOutOfStock} 
+              onChange={(e) => setShowOutOfStock(e.target.checked)} 
+              style={{ width: 14, height: 14, accentColor: "var(--primary)" }}
+            />
+            Show out of stock
+          </label>
           <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
             {cart.length} item{cart.length !== 1 ? "s" : ""} in cart
           </div>
@@ -328,16 +339,22 @@ export default function BillingPage() {
               ) : (
                 displayedMedicines.map((med) => {
                   const inCart = cart.find((i) => i.medicineId === med.id);
+                  const isOutOfStock = med.quantity <= 0;
+                  const isExpired = daysUntilExpiry(med.expiryDate) <= 0;
+                  const isDisabled = isOutOfStock || isExpired;
+
                   return (
                     <button
                       key={med.id}
-                      onClick={() => addToCart(med)}
+                      onClick={() => !isDisabled && addToCart(med)}
+                      disabled={isDisabled}
                       style={{
-                        background: inCart ? "var(--green-bg)" : "var(--bg-card)",
+                        background: inCart ? "var(--green-bg)" : isDisabled ? "#f8fafc" : "var(--bg-card)",
                         border: `1px solid ${inCart ? "var(--primary-light)" : "var(--border-muted)"}`,
                         borderRadius: 10,
                         padding: "12px",
-                        cursor: "pointer",
+                        cursor: isDisabled ? "not-allowed" : "pointer",
+                        opacity: isDisabled ? 0.6 : 1,
                         textAlign: "left",
                         transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
                         boxShadow: "var(--shadow-sm)",
@@ -346,12 +363,16 @@ export default function BillingPage() {
                         gap: 6,
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = "var(--primary)";
-                        e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                        if (!isDisabled) {
+                          e.currentTarget.style.borderColor = "var(--primary)";
+                          e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                        }
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = inCart ? "var(--primary-light)" : "var(--border-muted)";
-                        e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                        if (!isDisabled) {
+                          e.currentTarget.style.borderColor = inCart ? "var(--primary-light)" : "var(--border-muted)";
+                          e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                        }
                       }}
                       aria-label={`Add ${med.name} to cart`}
                     >
@@ -361,11 +382,19 @@ export default function BillingPage() {
                       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                         Stock: {med.quantity}
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2, width: "100%" }}>
                         <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "Figtree, sans-serif", color: "var(--primary)" }}>
                           ₹{med.price.toFixed(2)}
                         </span>
-                        {inCart ? (
+                        {isOutOfStock ? (
+                          <span style={{ fontSize: 10, fontWeight: 600, color: "var(--red)", background: "var(--red-bg)", borderRadius: 99, padding: "2px 6px" }}>
+                            Out of Stock
+                          </span>
+                        ) : isExpired ? (
+                          <span style={{ fontSize: 10, fontWeight: 600, color: "var(--yellow)", background: "var(--yellow-bg)", borderRadius: 99, padding: "2px 6px" }}>
+                            Expired
+                          </span>
+                        ) : inCart ? (
                           <span style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "var(--border)", borderRadius: 99, padding: "2px 7px" }}>
                             ×{inCart.quantity}
                           </span>

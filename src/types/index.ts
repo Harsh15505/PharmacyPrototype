@@ -5,6 +5,7 @@ export interface Medicine {
   quantity: number;
   expiryDate: string; // ISO date string YYYY-MM-DD
   batchNumber: string;
+  reorderLevel: number; // Custom threshold for low stock alert
   createdAt: string;
 }
 
